@@ -32,7 +32,7 @@ if [ -z "$MIRROR" ]; then
 fi
 
 mkdir -p config
-cp -af /usr/share/livecd-rootfs/live-build/functions config/functions
+cp -af ${OEM_PROJECT_ROOT}/live-build/functions config/functions
 
 mkdir -p config/package-lists
 
@@ -486,6 +486,10 @@ case $PROJECT in
 	ubuntu-server)
 		add_task install minimal
 		case ${SUBPROJECT:-} in
+			system-image)
+				add_task install standard
+				add_task install server
+				;;
 			live)
 				add_task install standard
 				add_task install server
@@ -707,6 +711,23 @@ case $PROJECT in
 esac
 
 case $ARCH in
+	arm64)
+		KERNEL_FLAVOURS="${SUBARCH:-$KERNEL_FLAVOURS}"
+		case $SUBARCH in
+			snapdragon)
+				COMPONENTS='main restricted universe multiverse'
+				add_package install linux-firmware-snapdragon u-boot-tools
+				BINARY_REMOVE_LINUX=false
+				# add hook script for snapdragon
+				add_chroot_hook 999-snapdragon-fixes
+				;;
+			generic)
+				COMPONENTS='main restricted universe multiverse'
+				add_package install linux-image-generic
+				BINARY_REMOVE_LINUX=false
+				;;
+		esac
+		;;
 	armel|armhf)
 		KERNEL_FLAVOURS="${SUBARCH:-$KERNEL_FLAVOURS}"
 		case $SUBARCH in
@@ -742,7 +763,7 @@ case $ARCH in
 				;;
 			raspi2)
 				COMPONENTS='main restricted universe multiverse'
-				add_package install linux-firmware-raspi2 u-boot-rpi flash-kernel u-boot-tools
+				add_package install linux-raspi2 linux-firmware-raspi2 u-boot-rpi flash-kernel u-boot-tools
 				BINARY_REMOVE_LINUX=false
 				;;
 		esac
@@ -809,6 +830,28 @@ echo "SUBPROJECT=\"${SUBPROJECT:-}\"" >> config/binary
 echo "LB_DISTRIBUTION=\"$SUITE\"" >> config/binary
 
 case $ARCH+$SUBARCH in
+	arm64+snapdragon)
+		cat > config/hooks/01-firmware-directory.chroot_early <<EOF
+#!/bin/sh -ex
+mkdir -p /boot/firmware
+EOF
+		cat > config/hooks/999-snapdragon-fixes.chroot <<EOF
+#!/bin/sh -ex
+cat >> /etc/fstab << EOM
+LABEL=system-boot       /boot/firmware  vfat    defaults        0       1
+LABEL=base-rootfs	/		ext4	defaults	0	1
+EOM
+EOF
+		;;
+	armhf+imx6)
+		cat > config/hooks/999-imx6-fixes.chroot <<EOF
+#!/bin/sh -ex
+cat >> /etc/fstab << EOM
+LABEL=system-boot       /boot/firmware  vfat    defaults        0       1
+LABEL=base-rootfs	/		ext4	defaults	0	1
+EOM
+EOF
+		;;
 	armhf+raspi2)
 		cat > config/hooks/01-firmware-directory.chroot_early <<EOF
 #!/bin/sh -ex
@@ -935,8 +978,8 @@ EOF
 		fi
 		;;
 
-	ubuntu-touch:*|ubuntu-touch-custom:*|ubuntu-core:system-image|ubuntu-desktop-next:system-image|ubuntu-cpc:*|ubuntu-server:live)
-		cp -af /usr/share/livecd-rootfs/live-build/${PROJECT}/* \
+	ubuntu-touch:*|ubuntu-touch-custom:*|ubuntu-core:system-image|ubuntu-desktop-next:system-image|ubuntu-cpc:*|ubuntu-server:*|ubuntu-base:*|ubuntu:*)
+		cp -af ${OEM_PROJECT_ROOT}/live-build/${PROJECT}/* \
 			config/
 		if [ "$IMAGEFORMAT" = none ]; then
 			rm -f config/hooks/*.binary*
