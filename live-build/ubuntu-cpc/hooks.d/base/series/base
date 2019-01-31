@@ -1,7 +1,0 @@
-depends root-dir
-depends tarball
-depends squashfs
-depends disk-image
-depends qcow2
-depends vmdk
-depends vagrant

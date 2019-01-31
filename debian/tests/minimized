@@ -1,3 +1,0 @@
-#!/bin/sh
-
-env SELECTED_TRIPLETS=ubuntu-cpc:minimized:ubuntu-cpc debian/tests/default-bootstraps

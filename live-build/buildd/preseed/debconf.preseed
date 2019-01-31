@@ -1,2 +1,0 @@
-# We never want debconf interaction.
-debconf debconf/frontend select Noninteractive
