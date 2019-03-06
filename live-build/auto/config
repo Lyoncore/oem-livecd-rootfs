@@ -889,6 +889,7 @@ EOF
 #!/bin/sh -ex
 cat >> /etc/fstab << EOM
 LABEL=system-boot       /boot/firmware  vfat    defaults        0       1
+LABEL=base-rootfs	/		ext4	defaults	0	1
 EOM
 
 cat > /boot/firmware/cmdline.txt << EOM
